@@ -1,0 +1,79 @@
+name: Issue Analyzer
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  analyze-issue:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Ensure custom labels exist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create "gameplay"    --description "Afecta mecánicas del juego" --color "0075ca" --repo ${{ github.repository }} 2>/dev/null || true
+          gh label create "visual"      --description "Afecta rendering o UI"       --color "e4e669" --repo ${{ github.repository }} 2>/dev/null || true
+          gh label create "performance" --description "Rendimiento / optimización"  --color "d93f0b" --repo ${{ github.repository }} 2>/dev/null || true
+
+      - name: Analyze issue with Claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: '--allowedTools "Bash(gh issue edit*),Bash(gh issue comment*)"'
+          prompt: |
+            Analiza el siguiente issue de GitHub y realiza exactamente estas dos acciones:
+
+            Issue #${{ github.event.issue.number }}: "${{ github.event.issue.title }}"
+            Cuerpo: ${{ github.event.issue.body }}
+
+            **ACCIÓN 1 — LABELS**
+            Aplica entre 1 y 3 labels relevantes ejecutando:
+            gh issue edit ${{ github.event.issue.number }} --repo ${{ github.repository }} --add-label "label1,label2"
+
+            Labels disponibles:
+            - `bug`: Algo funciona de forma incorrecta o inesperada
+            - `enhancement`: Nueva funcionalidad o mejora solicitada
+            - `documentation`: Mejoras o correcciones en la documentación
+            - `question`: Necesita más información o clarificación
+            - `gameplay`: Afecta mecánicas (movimiento, rotación, puntuación, velocidad, niveles)
+            - `visual`: Afecta el renderizado, canvas, CSS o apariencia de la UI
+            - `performance`: Problemas de velocidad de fotogramas, lag u optimización
+
+            **ACCIÓN 2 — DIAGNÓSTICO**
+            Publica un comentario con el diagnóstico ejecutando:
+            gh issue comment ${{ github.event.issue.number }} --repo ${{ github.repository }} --body "..."
+
+            El comentario debe seguir exactamente esta estructura en español:
+
+            ## 🔍 Diagnóstico automático
+
+            ### Resumen del problema
+            [1-2 oraciones describiendo el problema]
+
+            ### Área afectada
+            [Qué parte del código se ve involucrada: `game.js` (y qué función), `style.css`, `index.html`, lógica de rendering, input handling, scoring, etc.]
+
+            ### Prioridad estimada
+            **[Crítica / Alta / Media / Baja]** — [Justificación breve]
+
+            ### Enfoque técnico sugerido
+            - [Punto 1]
+            - [Punto 2]
+            - [Punto 3 si aplica]
+
+            ### Próximos pasos
+            [Qué información adicional se necesita o qué acción concreta debe tomarse para resolver el issue]
+
+            ---
+            *Análisis generado automáticamente por Claude*
