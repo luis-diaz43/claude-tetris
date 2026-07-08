@@ -54,6 +54,8 @@ jobs:
             Publica un comentario con el diagnóstico ejecutando:
             gh issue comment ${{ github.event.issue.number }} --repo ${{ github.repository }} --body "..."
 
+            El cuerpo del comentario debe estar escrito en GitHub Flavored Markdown (GFM) válido: usa `##` para encabezados, `**texto**` para negrita, guiones `-` para listas, y bloques de código con comillas invertidas. No uses HTML ni sintaxis que GitHub no renderice en comentarios de issues.
+
             El comentario debe seguir exactamente esta estructura en español:
 
             ## 🔍 Diagnóstico automático
